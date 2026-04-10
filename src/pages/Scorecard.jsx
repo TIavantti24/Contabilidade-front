@@ -19,8 +19,7 @@ function fmtNum(v) {
 
 function fmtDelta(v) {
   if (v === null || v === undefined) return '–'
-  const sign = v >= 0 ? '+' : ''
-  return `${sign}${Number(v).toFixed(1)}%`
+  return `${Number(v).toFixed(1)}%`
 }
 
 const STICKY0 = { position: 'sticky', left: 0, zIndex: 2, background: '#fff' }
@@ -29,8 +28,13 @@ const STICKY1 = { position: 'sticky', left: '40px', zIndex: 2, background: '#fff
 // ── Calcula valor/meta/delta para um mês específico ou YTD ───────────────────
 function getMesValues(ind, mesIdx) {
   if (mesIdx === null) {
-    // YTD acumulado
-    return { rea: ind.ytd_rea, met: ind.ytd_met, delta: ind.delta }
+    // YTD — recalcula delta como rea/met*100
+    const rea = ind.ytd_rea
+    const met = ind.ytd_met
+    const delta = (rea !== null && rea !== undefined && met)
+      ? (rea / met) * 100
+      : null
+    return { rea, met, delta }
   }
   const m = ind.monthly?.[mesIdx]
   if (!m) return { rea: null, met: null, delta: null }
@@ -38,7 +42,7 @@ function getMesValues(ind, mesIdx) {
   const met = m.meta
   let delta = null
   if (rea !== null && rea !== undefined && met) {
-    delta = (rea / met - 1) * 100
+    delta = (rea / met) * 100
   }
   return { rea, met, delta }
 }
@@ -253,7 +257,7 @@ export default function Scorecard() {
                           <td className="sc-num">{fmtNum(met)}</td>
 
                           {/* Δ% */}
-                          <td className={`sc-num ${delta >= 0 ? 'sc-delta-pos' : 'sc-delta-neg'}`}>
+                          <td className={`sc-num ${delta === null ? '' : delta >= 100 ? 'sc-delta-pos' : 'sc-delta-neg'}`}>
                             {fmtDelta(delta)}
                           </td>
 
