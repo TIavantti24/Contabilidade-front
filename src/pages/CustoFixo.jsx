@@ -38,6 +38,8 @@ function fmtLabel(label) {
 }
 
 function buildHierarquia(registros) {
+  // Agrupa por descrição (pai) → atividade (filho) → mês
+  // Soma múltiplos registros do mesmo pai+filho+mês (quando há várias descrições)
   const grupos = {}
   for (const r of registros) {
     const pai   = r.descricao || 'Sem Grupo'
@@ -45,9 +47,26 @@ function buildHierarquia(registros) {
     const mes   = labelToMes(r.data)
     if (!grupos[pai]) grupos[pai] = {}
     if (!grupos[pai][filho]) grupos[pai][filho] = {}
-    grupos[pai][filho][mes] = { rea: r.realizado, orc: r.orcado }
+    if (!grupos[pai][filho][mes]) grupos[pai][filho][mes] = { rea: 0, orc: 0 }
+    grupos[pai][filho][mes].rea += (r.realizado || 0)
+    grupos[pai][filho][mes].orc += (r.orcado || 0)
   }
   return grupos
+}
+
+// Agrega hierarquia colapsando todas as descrições numa única visão por atividade
+function buildAtividadeView(registros) {
+  // { atividade: { mes: { rea, orc } } }
+  const view = {}
+  for (const r of registros) {
+    const filho = r.atividade
+    const mes   = labelToMes(r.data)
+    if (!view[filho]) view[filho] = {}
+    if (!view[filho][mes]) view[filho][mes] = { rea: 0, orc: 0 }
+    view[filho][mes].rea += (r.realizado || 0)
+    view[filho][mes].orc += (r.orcado || 0)
+  }
+  return view
 }
 
 function somarMes(filhos, mes) {
@@ -158,9 +177,10 @@ export default function CustoFixo() {
         {
           label: 'Realizado',
           data: labels.map(filho => {
+            let total = 0
             for (const filhos of Object.values(hierarquia))
-              if (filhos[filho]) return Math.abs(filhos[filho][selMes]?.rea || 0)
-            return 0
+              if (filhos[filho]) total += Math.abs(filhos[filho][selMes]?.rea || 0)
+            return total
           }),
           backgroundColor: labels.map(filhoColor),
           borderRadius: 6,
@@ -168,9 +188,10 @@ export default function CustoFixo() {
         {
           label: 'Orçado',
           data: labels.map(filho => {
+            let total = 0
             for (const filhos of Object.values(hierarquia))
-              if (filhos[filho]) return Math.abs(filhos[filho][selMes]?.orc || 0)
-            return 0
+              if (filhos[filho]) total += Math.abs(filhos[filho][selMes]?.orc || 0)
+            return total
           }),
           backgroundColor: '#cbd5e1',
           borderRadius: 6,
@@ -186,16 +207,18 @@ export default function CustoFixo() {
       datasets = Array.from(atividadesSet).map(filho => ({
         label: filho,
         data: MONTH_SHORT.map((_, i) => {
+          // Soma TODOS os grupos pai que contêm essa atividade
+          let total = 0
           for (const filhos of Object.values(hierarquia))
-            if (filhos[filho]) return Math.abs(filhos[filho][i]?.rea || 0)
-          return 0
+            if (filhos[filho]) total += Math.abs(filhos[filho][i]?.rea || 0)
+          return total
         }),
         backgroundColor: filhoColor(filho),
         borderRadius: 0,
         stack: 'rea',
       }))
 
-      // Linha de orçado total
+      // Linha de orçado total — soma todos os grupos e atividades
       const totalOrc = MONTH_SHORT.map((_, i) => {
         let s = 0
         for (const filhos of Object.values(hierarquia))
@@ -269,11 +292,7 @@ export default function CustoFixo() {
           </div>
           <div className="sub">{kpiBom ? 'Abaixo do orçado ✓' : 'Acima do orçado ✗'}</div>
         </div>
-        <div className="stat-card" style={{ '--accent': '#d97706' }}>
-          <div className="label">Registros</div>
-          <div className="value">{totals.total_registros}</div>
-          <div className="sub">Linhas importadas</div>
-        </div>
+
         <div className="stat-card" style={{ '--accent': kpiPct <= 100 ? '#16a34a' : '#c0392b' }}>
           <div className="label">% Execução</div>
           <div className="value" style={{ fontSize: '1.3rem', color: kpiPct <= 100 ? 'var(--green)' : 'var(--red)' }}>
@@ -380,24 +399,29 @@ export default function CustoFixo() {
             Detalhamento
             {selMes !== null && <span style={{ fontWeight: 400, fontSize: '.85rem', marginLeft: 8, color: 'var(--muted)' }}>— {MONTH_FULL[selMes]}</span>}
           </h2>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>
-            <strong>+/−</strong> expandir · clique atividade = gráfico · clique mês = filtrar
-          </span>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: '.72rem' }}>
+            <span style={{ color: 'var(--muted)' }}><strong>+/−</strong> expandir · clique mês = filtrar</span>
+            <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, color: '#1a1d23', fontSize: '.72rem' }}>■ Realizado</span>
+              <span style={{ color: '#94a3b8', fontSize: '.72rem' }}>■ Orçado</span>
+            </span>
+          </div>
         </div>
         <div className="table-wrap">
-          <table style={{ minWidth: selMes !== null ? 500 : 1000 }}>
+          <table style={{ width: '100%', tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th style={{ width: 36 }}></th>
-                <th style={{ minWidth: 210 }}>Grupo / Atividade</th>
+                <th style={{ width: 28 }}></th>
+                <th style={{ width: 160, fontSize: '.78rem' }}>Grupo / Atividade</th>
 
                 {/* Colunas de mês: se mês selecionado mostra só ele, senão todos */}
                 {selMes !== null ? (
-                  <th style={{ textAlign: 'center', minWidth: 120 }}>{MONTH_SHORT[selMes]}</th>
+                  <th style={{ textAlign: 'center', width: 90 }}>{MONTH_SHORT[selMes]}</th>
                 ) : (
                   MONTH_SHORT.map((m, i) => (
                     <th key={i} onClick={() => toggleMes(i)} style={{
-                      textAlign: 'center', minWidth: 50, cursor: 'pointer', fontSize: '.76rem',
+                      textAlign: 'center', width: 60, cursor: 'pointer', fontSize: '.68rem',
+                      padding: '6px 2px',
                       background: mesesComDados.has(i) ? 'transparent' : '#f8fafc',
                       color: 'inherit', userSelect: 'none'
                     }}>
@@ -406,13 +430,13 @@ export default function CustoFixo() {
                   ))
                 )}
 
-                <th style={{ textAlign: 'right', minWidth: 100 }}>
-                  {selMes !== null ? 'Realizado' : 'Total Real.'}
+                <th style={{ textAlign: 'right', width: 80, fontSize: '.72rem' }}>
+                  {selMes !== null ? 'Real.' : 'Total Real.'}
                 </th>
-                <th style={{ textAlign: 'right', minWidth: 100 }}>
-                  {selMes !== null ? 'Orçado' : 'Total Orç.'}
+                <th style={{ textAlign: 'right', width: 80, fontSize: '.72rem' }}>
+                  {selMes !== null ? 'Orç.' : 'Total Orç.'}
                 </th>
-                <th style={{ textAlign: 'center', minWidth: 72 }}>Status</th>
+                <th style={{ textAlign: 'center', width: 60, fontSize: '.72rem' }}>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -433,31 +457,31 @@ export default function CustoFixo() {
                         {expandido ? '−' : '+'}
                       </button>
                     </td>
-                    <td style={{ paddingLeft: 6, fontSize: '.88rem' }}>{pai}</td>
+                    <td style={{ paddingLeft: 6, fontSize: '.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pai}</td>
 
                     {selMes !== null ? (
                       <td style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '.8rem', color: '#c0392b', fontWeight: 700 }}>{fmtBRL(paiRea)}</div>
-                        <div style={{ fontSize: '.72rem', color: 'var(--muted)' }}>{fmtBRL(paiOrc)}</div>
+                        <div style={{ fontWeight: 700, fontSize: '.8rem', color: '#1a1d23' }}>{fmtBRL(paiRea)}</div>
+                        <div style={{ fontSize: '.68rem', color: '#94a3b8', marginTop: 1 }}>{fmtBRL(paiOrc)}</div>
                       </td>
                     ) : (
                       MONTH_SHORT.map((_, i) => {
                         const { rea, orc } = somarMes(filhos, i)
                         return (
-                          <td key={i} onClick={() => toggleMes(i)} style={{ textAlign: 'center', cursor: 'pointer' }}>
+                          <td key={i} onClick={() => toggleMes(i)} style={{ textAlign: 'center', cursor: 'pointer', padding: '4px 1px' }}>
                             {rea || orc ? (
                               <>
-                                <div style={{ fontSize: '.71rem', color: '#c0392b', fontWeight: 600 }}>{fmtBRL(rea)}</div>
-                                <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{fmtBRL(orc)}</div>
+                                <div style={{ fontSize: '.65rem', fontWeight: 700, color: '#1a1d23', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtBRL(rea)}</div>
+                                <div style={{ fontSize: '.6rem', color: '#94a3b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtBRL(orc)}</div>
                               </>
-                            ) : <span style={{ color: 'var(--muted)', fontSize: '.7rem' }}>–</span>}
+                            ) : <span style={{ color: '#e2e8f0', fontSize: '.65rem' }}>–</span>}
                           </td>
                         )
                       })
                     )}
 
-                    <td style={{ textAlign: 'right', color: '#c0392b' }}>{fmtBRL(paiRea)}</td>
-                    <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{fmtBRL(paiOrc)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#1a1d23' }}>{fmtBRL(paiRea)}</td>
+                    <td style={{ textAlign: 'right', color: '#94a3b8' }}>{fmtBRL(paiOrc)}</td>
                     <td style={{ textAlign: 'center' }}><StatusBadge rea={paiRea} orc={paiOrc} /></td>
                   </tr>,
 
@@ -474,33 +498,32 @@ export default function CustoFixo() {
                         style={{ background: ativo ? '#eff6ff' : undefined, cursor: 'pointer' }}
                         onClick={() => setSelAtiv(ativo ? null : filho)}>
                         <td></td>
-                        <td style={{ paddingLeft: 28, fontSize: '.84rem' }}>
-                          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: cor, marginRight: 7 }} />
+                        <td style={{ paddingLeft: 20, fontSize: '.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {filho}
                           {ativo && <span style={{ marginLeft: 6, fontSize: '.67rem', color: '#2563eb', fontWeight: 600 }}>● gráfico</span>}
                         </td>
 
                         {selMes !== null ? (
                           <td style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '.78rem', color: cor }}>{fmtBRL(meses[selMes]?.rea)}</div>
-                            <div style={{ fontSize: '.71rem', color: 'var(--muted)' }}>{fmtBRL(meses[selMes]?.orc)}</div>
+                            <div style={{ fontSize: '.78rem', fontWeight: 600, color: '#1a1d23' }}>{fmtBRL(meses[selMes]?.rea)}</div>
+                            <div style={{ fontSize: '.68rem', color: '#94a3b8', marginTop: 1 }}>{fmtBRL(meses[selMes]?.orc)}</div>
                           </td>
                         ) : (
                           MONTH_SHORT.map((_, i) => (
                             <td key={i} onClick={e => { e.stopPropagation(); toggleMes(i) }}
-                              style={{ textAlign: 'center', cursor: 'pointer' }}>
+                              style={{ textAlign: 'center', cursor: 'pointer', padding: '4px 1px' }}>
                               {meses[i] ? (
                                 <>
-                                  <div style={{ fontSize: '.71rem', color: cor }}>{fmtBRL(meses[i].rea)}</div>
-                                  <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{fmtBRL(meses[i].orc)}</div>
+                                  <div style={{ fontSize: '.65rem', fontWeight: 600, color: '#1a1d23', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtBRL(meses[i].rea)}</div>
+                                  <div style={{ fontSize: '.6rem', color: '#94a3b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtBRL(meses[i].orc)}</div>
                                 </>
-                              ) : <span style={{ color: 'var(--muted)', fontSize: '.7rem' }}>–</span>}
+                              ) : <span style={{ color: '#e2e8f0', fontSize: '.65rem' }}>–</span>}
                             </td>
                           ))
                         )}
 
-                        <td style={{ textAlign: 'right', color: cor, fontSize: '.84rem' }}>{fmtBRL(fRea)}</td>
-                        <td style={{ textAlign: 'right', color: 'var(--muted)', fontSize: '.84rem' }}>{fmtBRL(fOrc)}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600, fontSize: '.84rem', color: '#1a1d23' }}>{fmtBRL(fRea)}</td>
+                        <td style={{ textAlign: 'right', fontSize: '.84rem', color: '#94a3b8' }}>{fmtBRL(fOrc)}</td>
                         <td style={{ textAlign: 'center' }}><StatusBadge rea={fRea} orc={fOrc} /></td>
                       </tr>
                     )

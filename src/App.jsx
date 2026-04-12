@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Scorecard from './pages/Scorecard'
 import Detalhe from './pages/Detalhe'
 import CustoFixo from './pages/CustoFixo'
+import Receita from './pages/Receita'
 import AdminUsers from './pages/AdminUsers'
 import AdminImportar from './pages/AdminImportar'
 import Hierarquia from './pages/Hierarquia'
@@ -25,13 +26,14 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard"           element={<Dashboard />} />
-            <Route path="scorecard"           element={<Scorecard />} />
-            <Route path="scorecard/:id"       element={<Detalhe />} />
-            <Route path="custo-fixo"          element={<CustoFixo />} />
-            <Route path="admin/users"         element={<PrivateRoute adminOnly><AdminUsers /></PrivateRoute>} />
-            <Route path="admin/hierarquia"    element={<PrivateRoute adminOnly><Hierarquia /></PrivateRoute>} />
-            <Route path="admin/importar"      element={<PrivateRoute adminOnly><AdminImportar /></PrivateRoute>} />
+            <Route path="dashboard"        element={<Dashboard />} />
+            <Route path="scorecard"        element={<Scorecard />} />
+            <Route path="scorecard/:id"    element={<Detalhe />} />
+            <Route path="custo-fixo"       element={<CustoFixo />} />
+            <Route path="receita"          element={<Receita />} />
+            <Route path="admin/users"      element={<PrivateRoute adminOnly><AdminUsers /></PrivateRoute>} />
+            <Route path="admin/hierarquia" element={<PrivateRoute adminOnly><Hierarquia /></PrivateRoute>} />
+            <Route path="admin/importar"   element={<PrivateRoute adminOnly><AdminImportar /></PrivateRoute>} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -3,15 +3,16 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const NAV_ITEMS = [
-  { to: '/dashboard',        icon: '⊞', label: 'Dashboard' },
-  { to: '/scorecard',        icon: '◎', label: 'Scorecard' },
-  { to: '/custo-fixo',       icon: '$', label: 'Custo Fixo' },
+  { to: '/dashboard',  icon: '⊞', label: 'Dashboard'  },
+  { to: '/scorecard',  icon: '◎', label: 'Scorecard'  },
+  { to: '/custo-fixo', icon: '$', label: 'Custo Fixo' },
+  { to: '/receita',    icon: '↗', label: 'Receita'    },
 ]
 
 const ADMIN_ITEMS = [
-  { to: '/admin/importar',   icon: '↑', label: 'Importar' },
+  { to: '/admin/importar',   icon: '↑', label: 'Importar'   },
   { to: '/admin/hierarquia', icon: '⌥', label: 'Hierarquia' },
-  { to: '/admin/users',      icon: '👤', label: 'Usuários' },
+  { to: '/admin/users',      icon: '👤', label: 'Usuários'   },
 ]
 
 export default function Layout() {
@@ -21,10 +22,11 @@ export default function Layout() {
 
   const pageTitle = () => {
     const p = location.pathname
-    if (p.includes('dashboard'))                            return 'Dashboard'
+    if (p.includes('dashboard'))                             return 'Dashboard'
     if (p.includes('scorecard') && p.split('/').length > 2) return 'Detalhe do Indicador'
-    if (p.includes('scorecard'))                            return 'Scorecard'
-    if (p.includes('custo-fixo'))                          return 'Custo Fixo'
+    if (p.includes('scorecard'))                             return 'Scorecard'
+    if (p.includes('custo-fixo'))                           return 'Custo Fixo'
+    if (p.includes('receita'))                              return 'Receita'
     if (p.includes('users'))                                return 'Usuários'
     if (p.includes('importar'))                             return 'Importar Planilhas'
     if (p.includes('hierarquia'))                           return 'Hierarquia de Indicadores'
@@ -71,7 +73,6 @@ export default function Layout() {
         {/* Nav links */}
         <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 0' }}>
 
-          {/* Seção principal */}
           {expanded && (
             <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'rgba(255,255,255,.35)',
               textTransform: 'uppercase', letterSpacing: 1, padding: '10px 16px 4px' }}>
@@ -137,7 +138,7 @@ export default function Layout() {
           )}
         </nav>
 
-        {/* Footer: avatar + sair */}
+        {/* Footer */}
         <div style={{
           borderTop: '1px solid rgba(255,255,255,.07)',
           padding: '10px 0 10px 14px',
@@ -164,14 +165,11 @@ export default function Layout() {
             </div>
           )}
           {expanded && (
-            <button
-              onClick={logout}
-              style={{
-                background: 'none', border: 'none', color: 'rgba(255,255,255,.45)',
-                cursor: 'pointer', fontSize: '.75rem', padding: '2px 8px',
-                marginRight: 6, flexShrink: 0,
-              }}
-            >
+            <button onClick={logout} style={{
+              background: 'none', border: 'none', color: 'rgba(255,255,255,.45)',
+              cursor: 'pointer', fontSize: '.75rem', padding: '2px 8px',
+              marginRight: 6, flexShrink: 0,
+            }}>
               Sair
             </button>
           )}
@@ -180,7 +178,6 @@ export default function Layout() {
 
       {/* ── CONTEÚDO ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-
         {/* Topbar */}
         <div style={{
           height: 56, background: '#fff',
