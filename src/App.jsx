@@ -4,7 +4,7 @@ import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Scorecard from './pages/Scorecard'
-import Detalhe from './pages/Detalhe'
+import DetalheScorecard from './pages/DetalheScorecard'
 import CustoFixo from './pages/CustoFixo'
 import Receita from './pages/Receita'
 import AdminUsers from './pages/AdminUsers'
@@ -28,7 +28,7 @@ export default function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard"        element={<Dashboard />} />
             <Route path="scorecard"        element={<Scorecard />} />
-            <Route path="scorecard/:id"    element={<Detalhe />} />
+            <Route path="scorecard/:atividade/:descricao" element={<DetalheScorecard />} />
             <Route path="custo-fixo"       element={<CustoFixo />} />
             <Route path="receita"          element={<Receita />} />
             <Route path="admin/users"      element={<PrivateRoute adminOnly><AdminUsers /></PrivateRoute>} />

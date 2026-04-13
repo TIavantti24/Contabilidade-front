@@ -270,6 +270,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--red); }
   font-weight: 700; font-size: .78rem;
   padding: 8px 12px; letter-spacing: .5px;
 }
+.sc-table .sc-group-row:hover td { background: #1a1d23 !important; color: #fff !important; }
 .sc-name { max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-name a { color: var(--red); text-decoration: none; font-weight: 500; }
 .sc-name a:hover { text-decoration: underline; }

@@ -70,7 +70,8 @@ export default function AdminImportar() {
 
   const uploadInd     = fd => api.post('/admin/import/indicadores', fd).finally(loadLogs)
   const uploadCusto   = fd => api.post('/admin/import/custo-fixo',  fd).finally(loadLogs)
-  const uploadReceita = fd => api.post('/admin/import/receita',      fd).finally(loadLogs)
+  const uploadReceita   = fd => api.post('/admin/import/receita',    fd).finally(loadLogs)
+  const uploadScorecard = fd => api.post('/admin/import/scorecard', fd).finally(loadLogs)
 
   // Badge de tipo colorido
   const tipoBadge = (tipo) => {
@@ -78,6 +79,7 @@ export default function AdminImportar() {
       indicadores: { bg: '#dbeafe', color: '#1e40af' },
       custo:       { bg: '#dcfce7', color: '#166534' },
       receita:     { bg: '#fef9c3', color: '#854d0e' },
+      scorecard:   { bg: '#dbeafe', color: '#1e3a8a' },
     }
     const s = map[tipo] || { bg: '#f3f4f6', color: '#6b7280' }
     return (
@@ -102,7 +104,7 @@ export default function AdminImportar() {
       </div>
 
       {/* Grid de importação — 3 colunas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
 
         {/* Indicadores */}
         <div className="card">
@@ -134,6 +136,15 @@ export default function AdminImportar() {
               Planilha com colunas: <strong>Atividade, Descrição, Data, REALIZADO, ORÇADO</strong>. Receita maior que orçado = positivo.
             </p>
             <DropArea label="Planilha de Receita" fieldName="planilha_receita" onUpload={uploadReceita} loading={loading} />
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header"><h2>Importar Scorecard</h2></div>
+          <div className="card-body">
+            <p style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: 16 }}>
+              Mesma planilha do Custo Fixo: <strong>Atividade, Descrição, Data, Realizado, Orçado</strong>. Monta o scorecard hierárquico com bolinhas de status mensais.
+            </p>
+            <DropArea label="Planilha de Scorecard" fieldName="planilha_scorecard" onUpload={uploadScorecard} loading={loading} />
           </div>
         </div>
       </div>
