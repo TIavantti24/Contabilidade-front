@@ -264,14 +264,14 @@ export default function Receita() {
           <div className="value" style={{ fontSize: '1.3rem', color: kpiBom ? 'var(--green)' : 'var(--red)' }}>
             {fmtBRL(kpiVar)}
           </div>
-          <div className="sub">{kpiBom ? 'Acima do orçado ✓' : 'Abaixo do orçado ✗'}</div>
+          <div className="sub">{kpiBom ? 'Acima do Orçado' : 'Abaixo do Orçado'}</div>
         </div>
         <div className="stat-card" style={{ '--accent': kpiPctBom ? '#16a34a' : '#c0392b' }}>
-          <div className="label">% Execução</div>
+          <div className="label">% Variação (Real − Orç.)</div>
           <div className="value" style={{ fontSize: '1.3rem', color: kpiPctBom ? 'var(--green)' : 'var(--red)' }}>
             {kpiPct.toFixed(1)}%
           </div>
-          <div className="sub">{kpiPctBom ? 'Acima do orçado ✓' : 'Abaixo do orçado ✗'}</div>
+          <div className="sub">{kpiPctBom ? 'Do Orçado' : 'Do Orçado'}</div>
         </div>
       </div>
 
