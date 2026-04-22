@@ -39,17 +39,24 @@ function fmtLabel(label) {
 
 function buildHierarquia(registros) {
   const grupos = {}
+  const graus  = {}  // { descricao: grau }
   for (const r of registros) {
     const pai   = r.descricao || 'Sem Grupo'
     const filho = r.atividade
     const mes   = labelToMes(r.data)
     if (!grupos[pai]) grupos[pai] = {}
+    if (graus[pai] === undefined) graus[pai] = r.grau ?? 0
     if (!grupos[pai][filho]) grupos[pai][filho] = {}
     if (!grupos[pai][filho][mes]) grupos[pai][filho][mes] = { rea: 0, orc: 0 }
     grupos[pai][filho][mes].rea += (r.realizado || 0)
     grupos[pai][filho][mes].orc += (r.orcado || 0)
   }
-  return grupos
+  // Retorna pais ordenados por grau
+  const ordenado = {}
+  Object.keys(grupos)
+    .sort((a, b) => (graus[a] ?? 0) - (graus[b] ?? 0))
+    .forEach(k => { ordenado[k] = grupos[k] })
+  return ordenado
 }
 
 function somarMes(filhos, mes) {

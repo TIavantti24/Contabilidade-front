@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext'
 
 const NAV_ITEMS = [
   { to: '/dashboard',  icon: '⊞', label: 'Dashboard'  },
-  { to: '/scorecard',  icon: '◎', label: 'Scorecard'  },
+  { to: '/scorecard',  icon: '◎', label: 'Indicadores'  },
   { to: '/custo-fixo', icon: '$', label: 'Custo Fixo' },
   { to: '/receita',    icon: '↗', label: 'Receita'    },
+  { to: '/dre',        icon: '📊', label: 'DRE'        },
 ]
 
 const ADMIN_ITEMS = [
@@ -24,9 +25,10 @@ export default function Layout() {
     const p = location.pathname
     if (p.includes('dashboard'))                             return 'Dashboard'
     if (p.includes('scorecard') && p.split('/').length > 2) return 'Detalhe do Indicador'
-    if (p.includes('scorecard'))                             return 'Scorecard'
+    if (p.includes('scorecard'))                             return 'Indicadores'
     if (p.includes('custo-fixo'))                           return 'Custo Fixo'
     if (p.includes('receita'))                              return 'Receita'
+    if (p.includes('dre'))                                 return 'DRE'
     if (p.includes('users'))                                return 'Usuários'
     if (p.includes('importar'))                             return 'Importar Planilhas'
     if (p.includes('hierarquia'))                           return 'Hierarquia de Indicadores'
@@ -46,7 +48,7 @@ export default function Layout() {
         style={{
           width: expanded ? W_EXPANDED : W_COLLAPSED,
           minWidth: expanded ? W_EXPANDED : W_COLLAPSED,
-          background: '#1a1d23',
+          background: '#1c5ddf',
           display: 'flex',
           flexDirection: 'column',
           transition: 'width .2s ease, min-width .2s ease',
@@ -74,7 +76,7 @@ export default function Layout() {
         <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 0' }}>
 
           {expanded && (
-            <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'rgba(255,255,255,.35)',
+            <div style={{ fontSize: '.62rem', fontWeight: 700, color: '#fff',
               textTransform: 'uppercase', letterSpacing: 1, padding: '10px 16px 4px' }}>
               Principal
             </div>
@@ -87,7 +89,7 @@ export default function Layout() {
               style={({ isActive }) => ({
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '10px 0 10px 16px',
-                color: isActive ? '#fff' : 'rgba(255,255,255,.55)',
+                color: isActive ? '#fff' : '#fff',
                 background: isActive ? 'rgba(231,76,60,.25)' : 'transparent',
                 borderLeft: isActive ? '3px solid #e74c3c' : '3px solid transparent',
                 textDecoration: 'none', fontWeight: isActive ? 600 : 400,
@@ -106,7 +108,7 @@ export default function Layout() {
           {user?.is_admin && (
             <>
               {expanded && (
-                <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'rgba(255,255,255,.35)',
+                <div style={{ fontSize: '.62rem', fontWeight: 700, color: '#fff',
                   textTransform: 'uppercase', letterSpacing: 1, padding: '14px 16px 4px' }}>
                   Administração
                 </div>
@@ -120,7 +122,7 @@ export default function Layout() {
                   style={({ isActive }) => ({
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '10px 0 10px 16px',
-                    color: isActive ? '#fff' : 'rgba(255,255,255,.55)',
+                    color: isActive ? '#fff' : '#fff',
                     background: isActive ? 'rgba(231,76,60,.25)' : 'transparent',
                     borderLeft: isActive ? '3px solid #e74c3c' : '3px solid transparent',
                     textDecoration: 'none', fontWeight: isActive ? 600 : 400,

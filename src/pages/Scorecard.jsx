@@ -16,7 +16,7 @@ function StatusIcon({ status }) {
 
 function fmtNum(v) {
   if (v == null) return '–'
-  return Number(Math.abs(v)).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+  return Number(Math.abs(v)).toLocaleString('pt-BR', { maximumFractionDigits: 0 })
 }
 function fmtPct(v) {
   if (v == null) return '–'
@@ -65,11 +65,36 @@ function DetalheModal({ ind, pai, onClose }) {
       data: {
         labels: MONTH_SHORT,
         datasets: [
-          { label:'Realizado', data: ind.monthly.map(m=>m.realizado!=null?Math.abs(m.realizado):null), backgroundColor: ind.monthly.map(m=>stColor(classify(m.realizado,m.orcado,seta))), borderRadius:5, order:2 },
-          { label:'Orçado', data: ind.monthly.map(m=>m.orcado!=null?Math.abs(m.orcado):null), type:'line', borderColor:'#1a1d23', borderWidth:2, borderDash:[5,3], pointRadius:4, fill:false, tension:0.1, order:1 }
+          {
+            label: 'Realizado',
+            data: ind.monthly.map(m=>m.realizado!=null?Math.abs(m.realizado):null),
+            backgroundColor: ind.monthly.map(m=>stColor(classify(m.realizado,m.orcado,seta))),
+            borderRadius: 5, order: 2,
+          },
+          {
+            label: 'Orçado',
+            data: ind.monthly.map(m=>m.orcado!=null?Math.abs(m.orcado):null),
+            type: 'line', borderColor: '#1a1d23', borderWidth: 2,
+            borderDash: [5,3], pointRadius: 4, fill: false, tension: 0.1, order: 1,
+          }
         ]
       },
-      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true, ticks:{callback:v=>`R$ ${(v/1000).toFixed(0)}k`}}} }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              usePointStyle: false,
+              generateLabels: () => [
+                { text: 'Realizado', fillStyle: '#9ca3af', strokeStyle: '#9ca3af', lineWidth: 0, pointStyle: 'rect', datasetIndex: 0 },
+                { text: 'Orçado', fillStyle: 'transparent', strokeStyle: '#1a1d23', lineWidth: 2, lineDash: [5,3], pointStyle: 'line', datasetIndex: 1 },
+              ]
+            }
+          }
+        },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => `R$ ${(v/1000).toFixed(0)}k` } } }
+      }
     })
     return () => chartInst.current?.destroy()
   }, [ind, aba, seta])
@@ -92,7 +117,25 @@ function DetalheModal({ ind, pai, onClose }) {
             <div>
               {pai && <div style={{fontSize:'.72rem',color:'var(--muted)',fontWeight:600,marginBottom:4}}>{pai}</div>}
               <h2 style={{fontSize:'1rem',fontWeight:700,color:'#1a1d23'}}>{ind.nome}</h2>
-              <div style={{fontSize:'.7rem',color:'#94a3b8',marginTop:2}}>{seta==='maior'?'↑ Quanto maior melhor':'↓ Quanto menor melhor'}</div>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginTop:6,flexWrap:'wrap'}}>
+                <span style={{fontWeight:800,fontSize:'1rem',color:'#1a1d23'}}>{seta==='maior'?'▲':'▼'}</span>
+                <span style={{fontSize:'.75rem',color:'#64748b',fontWeight:600}}>{seta==='maior'?'Quanto maior melhor':'Quanto menor melhor'}</span>
+                <span style={{width:1,height:14,background:'#e2e8f0',display:'inline-block'}}/>
+                {seta==='maior' ? <>
+                  <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-tri-up"/>≥121%</span>
+                  <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-diamond"/>101–120%</span>
+                  <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-dot green"/>100%</span>
+                  <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-dot yellow"/>90–99%</span>
+                  <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-tri"/>≤89%</span>
+                </> : <>
+                  <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-tri"/>≥121%</span>
+                  <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-dot yellow"/>101–120%</span>
+                  <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-dot green"/>100%</span>
+                  <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-diamond"/>90–99%</span>
+                  <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-tri-up"/>≤89%</span>
+                </>}
+                <span style={{display:'flex',alignItems:'center',gap:3,fontSize:'.7rem',color:'#64748b'}}><span className="sc-dot gray"/>Sem dados</span>
+              </div>
             </div>
             <button onClick={onClose} style={{background:'none',border:'none',fontSize:'1.4rem',cursor:'pointer',color:'#94a3b8'}}>×</button>
           </div>
@@ -109,13 +152,13 @@ function DetalheModal({ ind, pai, onClose }) {
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:20}}>
             {[
               {label:'YTD Realizado',value:fmtBRL(ytdRea),accent:'#0369a1',sub:'Acumulado anual'},
-              {label:'YTD Orçado',value:fmtBRL(ytdOrc),accent:'#475569',sub:'Acumulado anual'},
+              {label:'YTD Orçado',value:fmtBRL(ytdOrc),accent:'#000000',sub:'Acumulado anual'},
               {label:'% Execução',value:fmtPct(ytdPct),accent:ytdBom?'#16a34a':'#dc2626',color:ytdBom?'var(--green)':'var(--red)',sub:ytdBom?'✓':'✗'},
             ].map(k=>(
               <div key={k.label} className="stat-card" style={{'--accent':k.accent}}>
                 <div className="label">{k.label}</div>
                 <div className="value" style={{fontSize:'1.1rem',color:k.color}}>{k.value}</div>
-                <div className="sub">{k.sub}</div>
+                <div className="sub">{k.sub}</div>z
               </div>
             ))}
           </div>
@@ -217,7 +260,7 @@ export default function Scorecard() {
     api.get(`/scorecard/?${buildQS()}`).then(r=>{
       setData(r.data)
       setLoading(false)
-      setExpanded({}) // começa minimizado
+      setExpanded({})
     })
   },[q,grupoFil,ano_f])
 
@@ -250,7 +293,16 @@ export default function Scorecard() {
         <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-end',flex:1}}>
           <div className="form-group">
             <label>Buscar</label>
-            <input value={q} placeholder="Nome do indicador..." onChange={e=>setFilter('q',e.target.value)} style={{minWidth:180}} />
+            <select value={q} onChange={e=>setFilter('q',e.target.value)}>
+              <option value="">Todos</option>
+              {data?.groups?.flatMap(g=>
+                g.indicadores.flatMap(pai=>
+                  pai.indicadores.map(f=>(
+                    <option key={f.id} value={f.nome}>{f.nome}</option>
+                  ))
+                )
+              )}
+            </select>
           </div>
           <div className="form-group">
             <label>Grupo</label>
@@ -270,25 +322,26 @@ export default function Scorecard() {
         </div>
       </div>
 
-      <center><div style={{display:'flex',justifyContent:'center',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
         <div style={{display:'flex',gap:14,alignItems:'center',fontSize:'.72rem',color:'var(--muted)',flexWrap:'wrap'}}>
-        <span style={{fontWeight:700,color:'#1a1d23'}}>▲ Indicador Positivo</span>
-        <span><span className="sc-tri-up" style={{marginRight:4}}/>≥121%</span>
-        <span><span className="sc-diamond" style={{marginRight:4}}/>101–120%</span>
-        <span><span className="sc-dot green" style={{marginRight:4}}/>100%</span>
-        <span><span className="sc-dot yellow" style={{marginRight:4}}/>90–99%</span>
-        <span><span className="sc-tri" style={{marginRight:4}}/>≤89%</span>
-
-        <span style={{color:'#d1d5db'}}>|</span>
-
-        <span style={{fontWeight:700,color:'#1a1d23'}}>▼ Indicador Negativo</span>
-        <span><span className="sc-tri" style={{marginRight:4}}/>≥121%</span>
-        <span><span className="sc-dot yellow" style={{marginRight:4}}/>101–120%</span>
-        <span><span className="sc-dot green" style={{marginRight:4}}/>100%</span>
-        <span><span className="sc-diamond" style={{marginRight:4}}/>90–99%</span>
-        <span><span className="sc-tri-up" style={{marginRight:4}}/>≤89%</span>
-
-        <span><span className="sc-dot gray" style={{marginRight:4}}/>Sem dados</span>
+          <span style={{fontWeight:700,color:'#1a1d23',marginRight:4}}>▲ Indicador Positivo</span>
+          <span style={{color:'#d1d5db'}}>|</span>
+          <span><span className="sc-tri-up" style={{marginRight:4}}/>≥121%</span>
+          <span><span className="sc-diamond" style={{marginRight:4}}/>101–120%</span>
+          <span><span className="sc-dot green" style={{marginRight:4}}/>100%</span>
+          <span><span className="sc-dot yellow" style={{marginRight:4}}/>90–99%</span>
+          <span><span className="sc-tri" style={{marginRight:4}}/>≤89%</span>
+          <span><span className="sc-dot gray" style={{marginRight:4}}/>Sem dados</span>
+        </div>
+        <div style={{display:'flex',gap:14,alignItems:'center',fontSize:'.72rem',color:'var(--muted)',flexWrap:'wrap'}}>
+          <span style={{fontWeight:700,color:'#1a1d23',marginRight:4}}>▼ Indicador Negativo</span>
+          <span style={{color:'#d1d5db'}}>|</span>
+          <span><span className="sc-tri" style={{marginRight:4}}/>≥121%</span>
+          <span><span className="sc-dot yellow" style={{marginRight:4}}/>101–120%</span>
+          <span><span className="sc-dot green" style={{marginRight:4}}/>100%</span>
+          <span><span className="sc-diamond" style={{marginRight:4}}/>90–99%</span>
+          <span><span className="sc-tri-up" style={{marginRight:4}}/>≤89%</span>
+          <span><span className="sc-dot gray" style={{marginRight:4}}/>Sem dados</span>
         </div>
         {selMes!==null && (
           <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -296,7 +349,7 @@ export default function Scorecard() {
             <button onClick={()=>setSelMes(null)} style={{background:'none',border:'1px solid var(--border)',borderRadius:20,padding:'3px 10px',fontSize:'.72rem',cursor:'pointer',color:'var(--muted)'}}>✕ Ver YTD</button>
           </div>
         )}
-      </div></center>
+      </div>
 
       {loading && <div className="loading-center"><span className="spinner spinner-dark"/> Carregando...</div>}
 
@@ -330,7 +383,7 @@ export default function Scorecard() {
                   return [
                     /* ══ GRUPO ══ */
                     <tr key={grpKey} className="sc-section-row" style={{cursor:'pointer'}} onClick={()=>toggleKey(grpKey)}>
-                      <td style={{textAlign:'center',fontSize:'.85rem',fontWeight:700}}>{grpOpen?'−':'+'}</td>
+                      <td style={{textAlign:'center',fontSize:'.9rem',fontWeight:700}}>{grpOpen?'−':'+'}</td>
                       <td colSpan={4+months.length+1}>
                         {grp.grupo} ({grp.indicadores.length})
                       </td>
@@ -349,13 +402,15 @@ export default function Scorecard() {
                       return [
                         /* ── PAI ── */
                         <tr key={paiKey} className="sc-group-row" style={{cursor:'pointer'}} onClick={()=>toggleKey(paiKey)}>
-                          <td style={{textAlign:'center',fontSize:'.85rem'}}>{paiOpen?'−':'+'}</td>
+                          <td style={{textAlign:'center',fontSize:'.85rem',fontWeight:700}}>{paiOpen?'−':'+'}</td>
                           <td>
-                            <span onClick={e=>{e.stopPropagation();setModal({ind:{...pai,nome:pai.atividade},pai:grp.grupo})}}
-                              style={{cursor:'pointer',textDecoration:'underline dotted'}} title="Ver detalhe">
+                            <span
+                              onClick={e=>{e.stopPropagation();setModal({ind:{...pai,nome:pai.atividade},pai:grp.grupo})}}
+                              style={{cursor:'pointer',borderBottom:'1px dashed #aaa',fontSize:'0.8rem',fontWeight:700}}
+                              title="Ver detalhe">
                               {pai.atividade}
                             </span>
-                            <span style={{marginLeft:8,fontSize:'.8rem',fontWeight:900,color:'#1a1d23'}}>
+                            <span style={{marginLeft:8,fontSize:'0.8rem',fontWeight:700,color:'#1a1d23'}}>
                               {seta==='maior'?'▲':'▼'}
                             </span>
                           </td>
@@ -376,7 +431,7 @@ export default function Scorecard() {
                         </tr>,
 
                         /* ── FILHOS ── */
-                        ...(!paiOpen?[]:pai.indicadores.map((filho,idx)=>{
+                        ...(!paiOpen?[]:pai.indicadores.map((filho)=>{
                           const fRea=selMes!==null?(filho.monthly[selMes]?.realizado??null):filho.ytd_rea
                           const fOrc=selMes!==null?(filho.monthly[selMes]?.orcado??null):filho.ytd_orc
                           const fPct=pctVal(fRea,fOrc)
@@ -386,15 +441,16 @@ export default function Scorecard() {
                             <tr key={filho.id}
                               onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'}
                               onMouseLeave={e=>e.currentTarget.style.background=''}>
-                              <td className="sticky" style={{...STICKY0,width:40,color:'var(--muted)',fontSize:'.7rem'}}>{idx+1}</td>
+                              <td className="sticky" style={{...STICKY0,width:40}}></td>
                               <td className="sc-name sticky sticky-last indent-1" style={STICKY1}>
-                                <span onClick={()=>setModal({ind:{...filho,nome:filho.nome,seta},pai:pai.atividade})}
-                                  style={{cursor:'pointer',color:'var(--primary)',textDecoration:'underline dotted'}}>
+                                <span
+                                  onClick={()=>setModal({ind:{...filho,nome:filho.nome,seta},pai:pai.atividade})}
+                                  style={{cursor:'pointer',color:'#1c5ddf',borderBottom:'1px dashed #fca5a5'}}>
                                   {filho.nome}
                                 </span>
                               </td>
                               <td className="sc-num" title={fOrc!=null?`Orçado: ${fmtNum(fOrc)}`:''} style={{cursor:'help'}}>{fmtNum(fRea)}</td>
-                              <td className="sc-num" style={{color:'var(--muted)'}}>{fmtNum(fOrc)}</td>
+                              <td className="sc-num">{fmtNum(fOrc)}</td>
                               <td className={`sc-num ${fPct==null?'':fBom?'sc-delta-pos':'sc-delta-neg'}`}>{fmtPct(fPct)}</td>
                               {filho.monthly.map((m,mi)=>(
                                 <td key={mi} onClick={()=>toggleMes(mi)}

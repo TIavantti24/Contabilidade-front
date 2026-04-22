@@ -72,6 +72,7 @@ export default function AdminImportar() {
   const uploadCusto   = fd => api.post('/admin/import/custo-fixo',  fd).finally(loadLogs)
   const uploadReceita   = fd => api.post('/admin/import/receita',    fd).finally(loadLogs)
   const uploadScorecard = fd => api.post('/admin/import/scorecard', fd).finally(loadLogs)
+  const uploadDre       = fd => api.post('/admin/import/dre',       fd).finally(loadLogs)
 
   // Badge de tipo colorido
   const tipoBadge = (tipo) => {
@@ -80,6 +81,7 @@ export default function AdminImportar() {
       custo:       { bg: '#dcfce7', color: '#166534' },
       receita:     { bg: '#fef9c3', color: '#854d0e' },
       scorecard:   { bg: '#dbeafe', color: '#1e3a8a' },
+      dre:         { bg: '#f3e8ff', color: '#6b21a8' },
     }
     const s = map[tipo] || { bg: '#f3f4f6', color: '#6b7280' }
     return (
@@ -139,12 +141,21 @@ export default function AdminImportar() {
           </div>
         </div>
         <div className="card">
-          <div className="card-header"><h2>Importar Scorecard</h2></div>
+          <div className="card-header"><h2>Importar Indicadores</h2></div>
           <div className="card-body">
             <p style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: 16 }}>
               Mesma planilha do Custo Fixo: <strong>Atividade, Descrição, Data, Realizado, Orçado</strong>. Monta o scorecard hierárquico com bolinhas de status mensais.
             </p>
             <DropArea label="Planilha de Scorecard" fieldName="planilha_scorecard" onUpload={uploadScorecard} loading={loading} />
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header"><h2>Importar DRE</h2></div>
+          <div className="card-body">
+            <p style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: 16 }}>
+              Planilha com colunas: <strong>Atividade, Descrição, Data, Realizado, Orçado</strong>. Demonstração do Resultado do Exercício.
+            </p>
+            <DropArea label="Planilha de DRE" fieldName="planilha_dre" onUpload={uploadDre} loading={loading} />
           </div>
         </div>
       </div>

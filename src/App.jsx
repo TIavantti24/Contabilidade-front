@@ -4,9 +4,9 @@ import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Scorecard from './pages/Scorecard'
-import DetalheScorecard from './pages/DetalheScorecard'
 import CustoFixo from './pages/CustoFixo'
 import Receita from './pages/Receita'
+import DRE from './pages/DRE'
 import AdminUsers from './pages/AdminUsers'
 import AdminImportar from './pages/AdminImportar'
 import Hierarquia from './pages/Hierarquia'
@@ -28,9 +28,9 @@ export default function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard"        element={<Dashboard />} />
             <Route path="scorecard"        element={<Scorecard />} />
-            <Route path="scorecard/:atividade/:descricao" element={<DetalheScorecard />} />
             <Route path="custo-fixo"       element={<CustoFixo />} />
             <Route path="receita"          element={<Receita />} />
+            <Route path="dre"              element={<DRE />} />
             <Route path="admin/users"      element={<PrivateRoute adminOnly><AdminUsers /></PrivateRoute>} />
             <Route path="admin/hierarquia" element={<PrivateRoute adminOnly><Hierarquia /></PrivateRoute>} />
             <Route path="admin/importar"   element={<PrivateRoute adminOnly><AdminImportar /></PrivateRoute>} />

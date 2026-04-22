@@ -11,9 +11,9 @@
   --border: #e5e7eb;
   --card:   #ffffff;
   --bg:     #f3f4f6;
-  --text:   #111827;
+  --text:   #000000;
   --radius: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   --sidebar-w: 220px;
 }
 
@@ -263,19 +263,30 @@ input:focus, select:focus, textarea:focus { border-color: var(--red); }
   letter-spacing: .7px; color: var(--muted); text-align: center;
 }
 .sc-table th.left { text-align: left; }
-.sc-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-.sc-table tr:hover td { background: #fafbfc; }
+.sc-table td {
+  font-weight: bold;
+  padding: 7px 10px;
+  font-size: 1rem;  
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}.sc-table tr:hover td { background: #fafbfc; }
 .sc-group-row td {
-  background: #f1f5fc; color: #000000;
-  font-weight: 700; font-size: .78rem;
+  background: #f1f5fc; color: #0a0a0a;
+  font-weight: 700; font-size: .91rem;
   padding: 8px 12px; letter-spacing: .5px;
 }
 .sc-table .sc-group-row:hover td { background: #ffffff !important; color: #000000 !important; }
 .sc-name { max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-name a { color: var(--red); text-decoration: none; font-weight: 500; }
 .sc-name a:hover { text-decoration: underline; }
-.sc-num { text-align: right; font-family: 'DM Mono', monospace; font-size: .78rem; }
-.sc-delta-pos { color: var(--green); font-weight: 600; }
+.sc-num {
+  text-align: right;
+  color: #000000 !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: bold;
+  font-size: .85rem;
+  font-variant-numeric: tabular-nums;
+}.sc-delta-pos { color: var(--green); font-weight: 600; }
 .sc-delta-neg { color: var(--red); font-weight: 600; }
 .sc-dot-cell { text-align: center; width: 28px; padding: 5px 4px; }
 .sc-month-sep { border-left: 1px solid var(--border); }

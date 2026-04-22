@@ -8,17 +8,13 @@ const MONTH_FULL  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julh
 const MONTH_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const MONTH_ABBR  = ['J','F','M','A','M','J','J','A','S','O','N','D']
 
-const PALETTE = [
-  '#c0392b','#2563eb','#d97706','#16a34a','#7c3aed',
-  '#ea580c','#0891b2','#db2777','#65a30d','#9333ea',
-  '#b45309','#0284c7','#dc2626','#059669','#4f46e5',
-]
-const colorCache = {}
-let colorIdx = 0
-const filhoColor = nome => {
-  if (!colorCache[nome]) colorCache[nome] = PALETTE[colorIdx++ % PALETTE.length]
-  return colorCache[nome]
+const FILHO_COLORS = {
+  'Energia': '#0369a1',
+  'Imobiliaria': '#7c3aed',
+  'Desp. Gerais e Res. Financ.': '#047857',
 }
+const filhoColor = nome => FILHO_COLORS[nome] || '#0891b2'
+
 function fmtBRL(v) {
   if (v == null) return '–'
   return Number(Math.abs(v)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
@@ -42,34 +38,25 @@ function fmtLabel(label) {
 }
 
 function buildHierarquia(registros) {
-  // CustoFixo: Atividade = PAI, Descrição = FILHO
   const grupos = {}
+  const graus  = {}  // { descricao: grau }
   for (const r of registros) {
-    const pai   = r.atividade || 'Sem Grupo'
-    const filho = r.descricao || 'Sem Descrição'
+    const pai   = r.descricao || 'Sem Grupo'
+    const filho = r.atividade
     const mes   = labelToMes(r.data)
     if (!grupos[pai]) grupos[pai] = {}
+    if (graus[pai] === undefined) graus[pai] = r.grau ?? 0
     if (!grupos[pai][filho]) grupos[pai][filho] = {}
     if (!grupos[pai][filho][mes]) grupos[pai][filho][mes] = { rea: 0, orc: 0 }
     grupos[pai][filho][mes].rea += (r.realizado || 0)
     grupos[pai][filho][mes].orc += (r.orcado || 0)
   }
-  return grupos
-}
-
-// Agrega hierarquia colapsando todas as descrições numa única visão por atividade
-function buildAtividadeView(registros) {
-  // { atividade: { mes: { rea, orc } } }
-  const view = {}
-  for (const r of registros) {
-    const filho = r.atividade
-    const mes   = labelToMes(r.data)
-    if (!view[filho]) view[filho] = {}
-    if (!view[filho][mes]) view[filho][mes] = { rea: 0, orc: 0 }
-    view[filho][mes].rea += (r.realizado || 0)
-    view[filho][mes].orc += (r.orcado || 0)
-  }
-  return view
+  // Retorna pais ordenados por grau
+  const ordenado = {}
+  Object.keys(grupos)
+    .sort((a, b) => (graus[a] ?? 0) - (graus[b] ?? 0))
+    .forEach(k => { ordenado[k] = grupos[k] })
+  return ordenado
 }
 
 function somarMes(filhos, mes) {
@@ -92,27 +79,27 @@ function somarTudo(filhos) {
   return { rea, orc }
 }
 
+// ── LÓGICA INVERTIDA: receita maior que orçado = BOM ──
 function StatusBadge({ rea, orc }) {
   if (!rea && !orc) return null
-  const bom = Math.abs(rea) <= Math.abs(orc)
+  const bom = Math.abs(rea) >= Math.abs(orc)
   return (
     <span style={{
       background: bom ? '#dcfce7' : '#fee2e2',
       color: bom ? '#166534' : '#991b1b',
       padding: '2px 8px', borderRadius: 20, fontSize: '.68rem', fontWeight: 600
     }}>
-      {bom ? 'Dentro' : 'Acima'}
+      {bom ? 'Acima ✓' : 'Abaixo ✗'}
     </span>
   )
 }
 
-export default function CustoFixo() {
+export default function DRE() {
   const [data, setData]             = useState(null)
   const [loading, setLoading]       = useState(true)
   const [descFilt, setDescFilt]     = useState('')
   const [ativFilt, setAtivFilt]     = useState('')
   const [anoFilt, setAnoFilt]       = useState('')
-  // selMes: null = acumulado anual, 0–11 = mês específico
   const [selMes, setSelMes]         = useState(null)
   const [expandidos, setExpandidos] = useState({})
   const [selAtiv, setSelAtiv]       = useState(null)
@@ -121,28 +108,26 @@ export default function CustoFixo() {
 
   const load = (ativ = '', ano = '', desc = '') => {
     setLoading(true)
-    api.get(`/custo-fixo/?atividade=${ativ}&ano=${ano}&descricao=${desc}`)
+    api.get(`/dre/?atividade=${ativ}&ano=${ano}&descricao=${desc}`)
       .then(r => {
         setData(r.data)
         setLoading(false)
-        // expande todos os pais por padrão
         const exp = {}
-        for (const reg of r.data.registros) if (reg.atividade) exp[reg.atividade] = true
+        for (const reg of r.data.registros) if (reg.descricao) exp[reg.descricao] = true
         setExpandidos(exp)
         setSelAtiv(null)
       })
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
   const hierarquia = useMemo(() => data ? buildHierarquia(data.registros) : {}, [data])
   const mesesComDados = useMemo(() =>
     new Set(data?.registros.map(r => labelToMes(r.data)).filter(i => i >= 0) || []),
   [data])
 
-  // ── Gráfico: compacto, mostra atividades como barras empilhadas ──
-  // Se selMes=null → eixo X = 12 meses (só as atividades lado a lado)
-  // Se selMes=N    → eixo X = atividades (comparação naquele mês)
   useEffect(() => {
     if (!data || !chartRef.current) return
     if (chartInst.current) chartInst.current.destroy()
@@ -150,55 +135,37 @@ export default function CustoFixo() {
     let labels = [], datasets = []
 
     if (selAtiv) {
-      // Atividade (PAI) selecionada: mostra descricoes (filhos) empilhadas
-      const filhos = hierarquia[selAtiv] || {}
-      const filhoNomes = Object.keys(filhos)
-
-      if (selMes !== null) {
-        labels = filhoNomes
-        datasets = [
-          {
-            label: 'Realizado',
-            data: filhoNomes.map(f => Math.abs(filhos[f][selMes]?.rea || 0)),
-            backgroundColor: filhoNomes.map(filhoColor),
-            borderRadius: 6,
-          },
-          {
-            label: 'Orcado',
-            data: filhoNomes.map(f => Math.abs(filhos[f][selMes]?.orc || 0)),
-            backgroundColor: '#cbd5e1',
-            borderRadius: 6,
-          },
-        ]
-      } else {
-        labels = MONTH_SHORT
-        datasets = filhoNomes.map(f => ({
-          label: f,
-          data: MONTH_SHORT.map((_, i) => Math.abs(filhos[f][i]?.rea || 0)),
-          backgroundColor: filhoColor(f),
-          borderRadius: 0,
-          stack: 'rea',
-        }))
-        const totalOrc = MONTH_SHORT.map((_, i) =>
-          filhoNomes.reduce((s, f) => s + Math.abs(filhos[f][i]?.orc || 0), 0)
-        )
-        datasets.push({
-          label: 'Orcado Total', data: totalOrc,
-          type: 'line', borderColor: '#1a1d23', borderWidth: 2,
-          borderDash: [5,3], pointRadius: 3, fill: false, stack: undefined,
-        })
+      for (const filhos of Object.values(hierarquia)) {
+        if (!filhos[selAtiv]) continue
+        const meses = filhos[selAtiv]
+        if (selMes !== null) {
+          labels = [MONTH_FULL[selMes]]
+          datasets = [
+            { label: 'Realizado', data: [Math.abs(meses[selMes]?.rea || 0)], backgroundColor: filhoColor(selAtiv), borderRadius: 6 },
+            { label: 'Orçado',    data: [Math.abs(meses[selMes]?.orc || 0)], backgroundColor: '#cbd5e1', borderRadius: 6 },
+          ]
+        } else {
+          labels = MONTH_SHORT
+          datasets = [
+            { label: 'Realizado', data: MONTH_SHORT.map((_, i) => Math.abs(meses[i]?.rea || 0)), backgroundColor: filhoColor(selAtiv), borderRadius: 4 },
+            { label: 'Orçado', data: MONTH_SHORT.map((_, i) => Math.abs(meses[i]?.orc || 0)), type: 'line', borderColor: '#94a3b8', borderWidth: 2, borderDash: [5,3], pointRadius: 3, fill: false },
+          ]
+        }
+        break
       }
     } else if (selMes !== null) {
-      // Todas + mês selecionado: barras por atividade (PAI)
-      labels = Object.keys(hierarquia)
+      const atividadesSet = new Set()
+      for (const filhos of Object.values(hierarquia))
+        for (const filho of Object.keys(filhos)) atividadesSet.add(filho)
+      labels = Array.from(atividadesSet)
+
       datasets = [
         {
           label: 'Realizado',
-          data: labels.map(pai => {
-            const filhos = hierarquia[pai]
+          data: labels.map(filho => {
             let total = 0
-            for (const meses of Object.values(filhos))
-              total += Math.abs(meses[selMes]?.rea || 0)
+            for (const filhos of Object.values(hierarquia))
+              if (filhos[filho]) total += Math.abs(filhos[filho][selMes]?.rea || 0)
             return total
           }),
           backgroundColor: labels.map(filhoColor),
@@ -206,11 +173,10 @@ export default function CustoFixo() {
         },
         {
           label: 'Orçado',
-          data: labels.map(pai => {
-            const filhos = hierarquia[pai]
+          data: labels.map(filho => {
             let total = 0
-            for (const meses of Object.values(filhos))
-              total += Math.abs(meses[selMes]?.orc || 0)
+            for (const filhos of Object.values(hierarquia))
+              if (filhos[filho]) total += Math.abs(filhos[filho][selMes]?.orc || 0)
             return total
           }),
           backgroundColor: '#cbd5e1',
@@ -218,25 +184,24 @@ export default function CustoFixo() {
         },
       ]
     } else {
-      // Todas + anual: barras empilhadas por ATIVIDADE (PAI), eixo X = meses
       labels = MONTH_SHORT
-      const paiNomes = Object.keys(hierarquia)
+      const atividadesSet = new Set()
+      for (const filhos of Object.values(hierarquia))
+        for (const f of Object.keys(filhos)) atividadesSet.add(f)
 
-      datasets = paiNomes.map(pai => ({
-        label: pai,
+      datasets = Array.from(atividadesSet).map(filho => ({
+        label: filho,
         data: MONTH_SHORT.map((_, i) => {
-          const filhos = hierarquia[pai]
           let total = 0
-          for (const meses of Object.values(filhos))
-            total += Math.abs(meses[i]?.rea || 0)
+          for (const filhos of Object.values(hierarquia))
+            if (filhos[filho]) total += Math.abs(filhos[filho][i]?.rea || 0)
           return total
         }),
-        backgroundColor: filhoColor(pai),
+        backgroundColor: filhoColor(filho),
         borderRadius: 0,
         stack: 'rea',
       }))
 
-      // Linha de orçado total — soma todos os grupos e atividades
       const totalOrc = MONTH_SHORT.map((_, i) => {
         let s = 0
         for (const filhos of Object.values(hierarquia))
@@ -276,47 +241,43 @@ export default function CustoFixo() {
   if (!data)   return null
 
   const { totals, filters } = data
-  const variacaoBom = totals.variacao <= 0
 
-  // KPIs: se mês selecionado, calcula só daquele mês
-  const kpiRea = selMes !== null
-    ? data.registros.filter(r => labelToMes(r.data) === selMes).reduce((s,r) => s + (r.realizado||0), 0)
-    : totals.realizado
-  const kpiOrc = selMes !== null
-    ? data.registros.filter(r => labelToMes(r.data) === selMes).reduce((s,r) => s + (r.orcado||0), 0)
-    : totals.orcado
-  const kpiVar = kpiRea - kpiOrc
-  const kpiBom = kpiVar <= 0
-  const kpiPct = kpiOrc ? Math.abs(kpiRea / kpiOrc * 100) : 0
+  // KPIs fixos — sempre Lucro Líquido, calculado dos registros já carregados
+  const regsLL    = data.registros.filter(r => r.descricao === 'Lucro Líquido')
+  const kpiRea    = regsLL.reduce((s, r) => s + (r.realizado || 0), 0)
+  const kpiOrc    = regsLL.reduce((s, r) => s + (r.orcado    || 0), 0)
+  const kpiVar    = kpiRea - kpiOrc
+  const kpiBom    = Math.abs(kpiRea) >= Math.abs(kpiOrc)
+  const kpiPct    = kpiOrc ? Math.abs(kpiRea / kpiOrc * 100) : 0
+  const kpiPctBom = kpiPct >= 100
 
   return (
     <>
       {/* KPIs */}
       <div className="stats-grid" style={{ marginBottom: 24 }}>
-        <div className="stat-card" style={{ '--accent': '#c0392b' }}>
+        <div className="stat-card" style={{ '--accent': '#0369a1' }}>
           <div className="label">Total Realizado</div>
           <div className="value" style={{ fontSize: '1.3rem' }}>{fmtBRL(kpiRea)}</div>
-          <div className="sub">{selMes !== null ? MONTH_FULL[selMes] : 'Acumulado anual'}</div>
+          <div className="sub">Lucro Líquido — Acumulado anual</div>
         </div>
-        <div className="stat-card" style={{ '--accent': '#2563eb' }}>
+        <div className="stat-card" style={{ '--accent': '#475569' }}>
           <div className="label">Total Orçado</div>
           <div className="value" style={{ fontSize: '1.3rem' }}>{fmtBRL(kpiOrc)}</div>
-          <div className="sub">{selMes !== null ? MONTH_FULL[selMes] : 'Acumulado anual'}</div>
+          <div className="sub">Lucro Líquido — Acumulado anual</div>
         </div>
         <div className="stat-card" style={{ '--accent': kpiBom ? '#16a34a' : '#c0392b' }}>
-          <div className="label">Variação</div>
+          <div className="label">Variação (Real − Orç.)</div>
           <div className="value" style={{ fontSize: '1.3rem', color: kpiBom ? 'var(--green)' : 'var(--red)' }}>
             {fmtBRL(kpiVar)}
           </div>
-          <div className="sub">{kpiBom ? 'Abaixo do orçado ✓' : 'Acima do orçado ✗'}</div>
+          <div className="sub">{kpiBom ? 'Acima do orçado ✓' : 'Abaixo do orçado ✗'}</div>
         </div>
-
-        <div className="stat-card" style={{ '--accent': kpiPct <= 100 ? '#16a34a' : '#c0392b' }}>
+        <div className="stat-card" style={{ '--accent': kpiPctBom ? '#16a34a' : '#c0392b' }}>
           <div className="label">% Execução</div>
-          <div className="value" style={{ fontSize: '1.3rem', color: kpiPct <= 100 ? 'var(--green)' : 'var(--red)' }}>
+          <div className="value" style={{ fontSize: '1.3rem', color: kpiPctBom ? 'var(--green)' : 'var(--red)' }}>
             {kpiPct.toFixed(1)}%
           </div>
-          <div className="sub">{kpiPct <= 100 ? 'Dentro do orçado' : 'Acima do orçado'}</div>
+          <div className="sub">{kpiPctBom ? 'Acima do orçado ✓' : 'Abaixo do orçado ✗'}</div>
         </div>
       </div>
 
@@ -359,50 +320,20 @@ export default function CustoFixo() {
         </div>
       </div>
 
-      {/* Seletor de mês + Gráfico */}
+      {/* Gráfico */}
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <h2>
               {selAtiv
                 ? `${selAtiv}${selMes !== null ? ` — ${MONTH_FULL[selMes]}` : ' — Anual'}`
-                : selMes !== null ? `Total — ${MONTH_FULL[selMes]}` : 'Total Anual por Atividade'}
+                : selMes !== null ? `Total — ${MONTH_FULL[selMes]}` : 'Lucro Líquido — Anual por Atividade'}
             </h2>
             <div style={{ display: 'flex', gap: 6 }}>
               {selAtiv && <button className="btn btn-sm btn-outline" onClick={() => setSelAtiv(null)}>✕ Ver total</button>}
               {selMes !== null && <button className="btn btn-sm btn-outline" onClick={() => setSelMes(null)}>✕ Ver anual</button>}
             </div>
           </div>
-
-          {/* Filtro por atividade (PAI) */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '.75rem', color: 'var(--muted)', marginRight: 4 }}>Atividade:</span>
-            <button onClick={() => setSelAtiv(null)} style={{
-              padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border)',
-              cursor: 'pointer', fontSize: '.78rem', fontWeight: 600,
-              background: !selAtiv ? '#1a1d23' : 'var(--bg)',
-              color: !selAtiv ? '#fff' : 'var(--text)'
-            }}>
-              Todas
-            </button>
-            {Object.keys(hierarquia).map(ativ => {
-              const ativo = selAtiv === ativ
-              return (
-                <button key={ativ} onClick={() => setSelAtiv(ativo ? null : ativ)} style={{
-                  padding: '4px 14px', borderRadius: 20,
-                  border: `2px solid ${ativo ? '#2563eb' : 'var(--border)'}`,
-                  cursor: 'pointer', fontSize: '.78rem', fontWeight: ativo ? 700 : 400,
-                  background: ativo ? '#2563eb' : 'var(--bg)',
-                  color: ativo ? '#fff' : 'var(--text)',
-                  transition: 'all .15s'
-                }}>
-                  {ativ}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Abas de mês — J F M A M J J A S O N D */}
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: '.75rem', color: 'var(--muted)', marginRight: 4 }}>Mês:</span>
             <button onClick={() => setSelMes(null)} style={{
@@ -410,27 +341,22 @@ export default function CustoFixo() {
               cursor: 'pointer', fontSize: '.78rem', fontWeight: 600,
               background: selMes === null ? '#1a1d23' : 'var(--bg)',
               color: selMes === null ? '#fff' : 'var(--text)'
-            }}>
-              Acum.
-            </button>
+            }}>Acum.</button>
             {MONTH_ABBR.map((abbr, idx) => {
               const temDado = mesesComDados.has(idx)
               const ativo   = selMes === idx
               return (
                 <button key={idx} onClick={() => temDado && toggleMes(idx)} style={{
-                  width: 32, height: 32, borderRadius: '50%', border: `2px solid ${ativo ? '#2563eb' : 'var(--border)'}`,
+                  width: 32, height: 32, borderRadius: '50%', border: `2px solid ${ativo ? '#0369a1' : 'var(--border)'}`,
                   cursor: temDado ? 'pointer' : 'default', fontSize: '.8rem', fontWeight: ativo ? 700 : 400,
-                  background: ativo ? '#2563eb' : temDado ? 'var(--bg)' : 'transparent',
+                  background: ativo ? '#0369a1' : temDado ? 'var(--bg)' : 'transparent',
                   color: ativo ? '#fff' : temDado ? 'var(--text)' : 'var(--muted)',
                   opacity: temDado ? 1 : 0.3, transition: 'all .15s'
-                }}>
-                  {abbr}
-                </button>
+                }}>{abbr}</button>
               )
             })}
           </div>
         </div>
-
         <div className="card-body" style={{ paddingTop: 8 }}>
           <div style={{ position: 'relative', height: 240 }}>
             <canvas ref={chartRef} />
@@ -442,7 +368,7 @@ export default function CustoFixo() {
       <div className="card">
         <div className="card-header">
           <h2>
-            Detalhamento
+            Lucro Líquido — Detalhamento por Atividade
             {selMes !== null && <span style={{ fontWeight: 400, fontSize: '.85rem', marginLeft: 8, color: 'var(--muted)' }}>— {MONTH_FULL[selMes]}</span>}
           </h2>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: '.72rem' }}>
@@ -459,8 +385,6 @@ export default function CustoFixo() {
               <tr>
                 <th style={{ width: 28 }}></th>
                 <th style={{ width: 160, fontSize: '.78rem' }}>Grupo / Atividade</th>
-
-                {/* Colunas de mês: se mês selecionado mostra só ele, senão todos */}
                 {selMes !== null ? (
                   <th style={{ textAlign: 'center', width: 90 }}>{MONTH_SHORT[selMes]}</th>
                 ) : (
@@ -469,19 +393,12 @@ export default function CustoFixo() {
                       textAlign: 'center', width: 60, cursor: 'pointer', fontSize: '.68rem',
                       padding: '6px 2px',
                       background: mesesComDados.has(i) ? 'transparent' : '#f8fafc',
-                      color: 'inherit', userSelect: 'none'
-                    }}>
-                      {m}
-                    </th>
+                      userSelect: 'none'
+                    }}>{m}</th>
                   ))
                 )}
-
-                <th style={{ textAlign: 'right', width: 80, fontSize: '.72rem' }}>
-                  {selMes !== null ? 'Real.' : 'Total Real.'}
-                </th>
-                <th style={{ textAlign: 'right', width: 80, fontSize: '.72rem' }}>
-                  {selMes !== null ? 'Orç.' : 'Total Orç.'}
-                </th>
+                <th style={{ textAlign: 'right', width: 80, fontSize: '.72rem' }}>{selMes !== null ? 'Real.' : 'Total Real.'}</th>
+                <th style={{ textAlign: 'right', width: 80, fontSize: '.72rem' }}>{selMes !== null ? 'Orç.' : 'Total Orç.'}</th>
                 <th style={{ textAlign: 'center', width: 60, fontSize: '.72rem' }}>Status</th>
               </tr>
             </thead>
@@ -491,24 +408,16 @@ export default function CustoFixo() {
                 const { rea: paiRea, orc: paiOrc } = selMes !== null ? somarMes(filhos, selMes) : somarTudo(filhos)
 
                 return [
-                  /* ── LINHA PAI ── */
-                  <tr key={`pai-${pai}`}
-                    style={{ background: selAtiv === pai ? '#eff6ff' : '#f1f5f9', fontWeight: 700, cursor: 'pointer' }}
-                    onClick={() => setSelAtiv(selAtiv === pai ? null : pai)}>
+                  <tr key={`pai-${pai}`} style={{ background: '#f1f5f9', fontWeight: 700 }}>
                     <td style={{ textAlign: 'center', padding: '8px 4px' }}>
-                      <button onClick={e => { e.stopPropagation(); togglePai(pai) }} style={{
+                      <button onClick={() => togglePai(pai)} style={{
                         background: expandido ? '#1a1d23' : '#e2e8f0',
                         color: expandido ? '#fff' : '#475569',
                         border: 'none', borderRadius: 4, width: 22, height: 22,
                         cursor: 'pointer', fontWeight: 800, fontSize: '1rem', lineHeight: '20px'
-                      }}>
-                        {expandido ? '−' : '+'}
-                      </button>
+                      }}>{expandido ? '−' : '+'}</button>
                     </td>
-                    <td style={{ paddingLeft: 6, fontSize: '.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {pai}
-                      {selAtiv === pai && <span style={{ marginLeft: 6, fontSize: '.67rem', color: '#2563eb', fontWeight: 600 }}>● gráfico</span>}
-                    </td>
+                    <td style={{ paddingLeft: 6, fontSize: '.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pai}</td>
 
                     {selMes !== null ? (
                       <td style={{ textAlign: 'center' }}>
@@ -536,17 +445,20 @@ export default function CustoFixo() {
                     <td style={{ textAlign: 'center' }}><StatusBadge rea={paiRea} orc={paiOrc} /></td>
                   </tr>,
 
-                  /* ── LINHAS FILHO ── */
                   ...(!expandido ? [] : Object.entries(filhos).map(([filho, meses]) => {
                     const { rea: fRea, orc: fOrc } = selMes !== null
                       ? { rea: meses[selMes]?.rea || 0, orc: meses[selMes]?.orc || 0 }
                       : Object.values(meses).reduce((acc, v) => ({ rea: acc.rea + (v.rea||0), orc: acc.orc + (v.orc||0) }), { rea: 0, orc: 0 })
+                    const ativo = selAtiv === filho
 
                     return (
-                      <tr key={`filho-${filho}`} style={{ background: undefined }}>
+                      <tr key={`filho-${filho}`}
+                        style={{ background: ativo ? '#eff6ff' : undefined, cursor: 'pointer' }}
+                        onClick={() => setSelAtiv(ativo ? null : filho)}>
                         <td></td>
                         <td style={{ paddingLeft: 20, fontSize: '.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {filho}
+                          {ativo && <span style={{ marginLeft: 6, fontSize: '.67rem', color: '#0369a1', fontWeight: 600 }}>● gráfico</span>}
                         </td>
 
                         {selMes !== null ? (
