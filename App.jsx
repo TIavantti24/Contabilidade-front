@@ -10,6 +10,8 @@ import DRE from './pages/DRE'
 import AdminUsers from './pages/AdminUsers'
 import AdminImportar from './pages/AdminImportar'
 import Hierarquia from './pages/Hierarquia'
+import Manutencao from './pages/Manutencao'
+
 
 function PrivateRoute({ children, adminOnly = false }) {
   const { user } = useAuth()
@@ -31,6 +33,7 @@ export default function App() {
             <Route path="custo-fixo"       element={<CustoFixo />} />
             <Route path="receita"          element={<Receita />} />
             <Route path="dre"              element={<DRE />} />
+            <Route path="manutencao"       element={<Manutencao />} />
             <Route path="admin/users"      element={<PrivateRoute adminOnly><AdminUsers /></PrivateRoute>} />
             <Route path="admin/hierarquia" element={<PrivateRoute adminOnly><Hierarquia /></PrivateRoute>} />
             <Route path="admin/importar"   element={<PrivateRoute adminOnly><AdminImportar /></PrivateRoute>} />
