@@ -73,12 +73,13 @@ export default function AdminImportar() {
   const uploadReceita   = fd => api.post('/admin/import/receita',    fd).finally(loadLogs)
   const uploadScorecard = fd => api.post('/admin/import/scorecard', fd).finally(loadLogs)
   const uploadDre       = fd => api.post('/admin/import/dre',       fd).finally(loadLogs)
-
+  const uploadManutencao = fd => api.post('/admin/import/manutencao', fd).finally(loadLogs)
   // Badge de tipo colorido
   const tipoBadge = (tipo) => {
     const map = {
       indicadores: { bg: '#dbeafe', color: '#1e40af' },
       custo:       { bg: '#dcfce7', color: '#166534' },
+      manutencao:  { bg: '#fed7aa', color: '#9a3412' },  // NOVO - laranja
       receita:     { bg: '#fef9c3', color: '#854d0e' },
       scorecard:   { bg: '#dbeafe', color: '#1e3a8a' },
       dre:         { bg: '#f3e8ff', color: '#6b21a8' },
@@ -108,16 +109,17 @@ export default function AdminImportar() {
       {/* Grid de importação — 3 colunas */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
 
-        {/* Indicadores */}
-        <div className="card">
-          <div className="card-header"><h2>Importar Indicadores</h2></div>
-          <div className="card-body">
-            <p style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: 16 }}>
-              Planilha com aba <strong>Indicadores</strong>. Colunas obrigatórias: NOME DO INDICADOR, SIGLA UNIDADE, ÁREA DE RESULTADO.
-            </p>
-            <DropArea label="Planilha de Indicadores" fieldName="planilha" onUpload={uploadInd} loading={loading} />
-          </div>
-        </div>
+
+{/* Manutenção */}
+<div className="card">
+  <div className="card-header"><h2>Importar Manutenção</h2></div>
+  <div className="card-body">
+    <p style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: 16 }}>
+      Planilha com colunas: <strong>Atividade, Descrição, Data, REALIZADO, ORÇADO</strong>.
+    </p>
+    <DropArea label="Planilha de Manutenção" fieldName="planilha_manutencao" onUpload={uploadManutencao} loading={loading} />
+  </div>
+</div>
 
         {/* Custo Fixo */}
         <div className="card">

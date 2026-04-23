@@ -5,7 +5,8 @@ import { useAuth } from '../context/AuthContext'
 const NAV_ITEMS = [
   { to: '/dashboard',  icon: '⊞', label: 'Dashboard'  },
   { to: '/scorecard',  icon: '◎', label: 'Indicadores'  },
-  { to: '/custo-fixo', icon: '$', label: 'Manutenção' },
+  { to: '/custo-fixo', icon: '$', label: 'Custo Fixo' },  // em vez de "Custo-Fixo"
+  { to: '/manutencao', icon: '🔧', label: 'Manutenção' },  // ALTERADO: antes era /custo-fixo
   { to: '/receita',    icon: '↗', label: 'Receita'    },
   { to: '/dre',        icon: '📊', label: 'DRE'        },
 ]
@@ -27,6 +28,7 @@ export default function Layout() {
     if (p.includes('scorecard') && p.split('/').length > 2) return 'Detalhe do Indicador'
     if (p.includes('scorecard'))                             return 'Indicadores'
     if (p.includes('custo-fixo'))                           return 'Custo Fixo'
+    if (p.includes('manutencao'))                           return 'Manutenção'  // ALTERADO
     if (p.includes('receita'))                              return 'Receita'
     if (p.includes('dre'))                                 return 'DRE'
     if (p.includes('users'))                                return 'Usuários'
